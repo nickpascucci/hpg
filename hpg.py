@@ -107,7 +107,7 @@ def store_key(identifier, prompt=True, save=False):
             confirmation = raw_input("Store this key? [y/N] ")
             if confirmation.lower() == "y":
                 save = True
-        if not save:
+        if save:
             keyfile = open(KEYS_FILE, "a")
             keyfile.write(identifier + "\n")
 

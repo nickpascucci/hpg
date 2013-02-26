@@ -7,6 +7,7 @@ Uses a seed password and an identifier to generate a password. This allows it to
 generate unique passwords and recover them easily.
 """
 
+import argparse
 import getpass
 import hashlib
 import os
@@ -18,76 +19,78 @@ import subprocess
 __author__ = "Nick Pascucci (npascut1@gmail.com)"
 
 HELP_TEXT = ("Usage: hpg [-l<password length>] [-e<excluded chars>] " 
-             "[-a] [-c] [-n]")
+             "[-a] [-c] [-n] <identifier>")
 CONFIG_DIR = os.path.expanduser("~/.hpg")
 KEYS_FILE = CONFIG_DIR + "/keys"
 
+parser = argparse.ArgumentParser(description="A simple password generator.")
+parser.add_argument("-l", "--length", help="password length",
+                    default=12, dest="length")
+parser.add_argument("-e", "--excluded-chars", help="exclude characters",
+                    default="", dest="excluded_chars")
+parser.add_argument("-a", "--alphanumeric", help="use only [a-zA-Z0-9]",
+                    action="store_true", default=False, dest="alpha")
+parser.add_argument("-c", "--copy", help="copy to X clipboard",
+                    action="store_true", default=False, dest="copy")
+parser.add_argument("-n", "--no-save", help="don't save key",
+                    action="store_false", default=True, dest="save")
+parser.add_argument("-p", "--print-keys", help="show saved keys",
+                    action="store_true", default=False, dest="print_keys")
+parser.add_argument("-s", "--search", help="search stored keys",
+                    dest="search", nargs="+")
+parser.add_argument("key", help="key to use as password base", nargs="*")
+
+options = parser.parse_args()
+
 def main():
-    BASE_CHARS = string.printable
-    UNGOOD_CHARS = string.whitespace
-    NUM_CHARS = 12
-    copy_to_clipboard = False
-    prompt_for_save = True
+    if not options.key and not options.print_keys and not options.search:
+        parser.print_help()
+
+    if options.print_keys:
+        print_keys()
+        exit(0)
+
+    if options.search:
+        search(options.search)
+        exit(0)
+
+    if options.alpha:
+        available_chars = set(string.ascii_letters + string.digits)
+    else:
+        available_chars = set(string.printable)
+    available_chars -= set(string.whitespace + options.excluded_chars)
 
     # Check arguments.
-    if len(sys.argv) < 2:
-        print HELP_TEXT
+    if options.copy and not check_for_xsel():
+        print ("xsel is not in your PATH. You must install it "
+               "before passwords can be copied to the clipboard.")
         exit(1)
-    if len(sys.argv) > 2:
-        for arg in sys.argv[1:-1]:
-            arg = arg.strip()
-            if arg.startswith("-l"):
-                try:
-                    NUM_CHARS = int(arg[2:])
-                    print "Password length:", NUM_CHARS
-                except:
-                    print HELP_TEXT
-            elif arg.startswith("-e"):
-                print "Excluding", arg[2:]
-                UNGOOD_CHARS += arg[2:]
-            elif arg == "-a":
-                print "Using only alphanumeric characters."
-                BASE_CHARS = string.letters + string.digits
-            elif arg == "-c":
-                if not check_for_xsel():
-                    print ("xsel is not in your PATH. You must install it "
-                           "before passwords can be copied to the clipboard.")
-                    exit(1)
-                copy_to_clipboard = True
-            elif arg == "-n":
-                prompt_for_save = False
-            else:
-                print "Unrecognized option %s. Ignoring." % arg
 
-    identifier = sys.argv[-1]
-    
-    store_key(identifier, prompt_for_save)
+    save_key(options.key, options.save, get_options(options))
 
-    # Get password from user without echoing.
+    # Get salt from user without echoing.
     password = getpass.getpass("Salt: ")
-    # Hash their password; this is our seed.
     pw_hash = hashlib.sha512(password).digest()
-    generated_pass = hashlib.sha512(pw_hash + identifier).digest()
+    generated_pass = hashlib.sha512(pw_hash + options.key).digest()
 
     # Now, we need to extract a printable password from the hash.
     printable_pass = ""
     position = 0
-    while len(printable_pass) < NUM_CHARS: # and position < len(generated_pass):
+    while len(printable_pass) < NUM_CHARS:
         # Skip non-printable characters.
-        while (generated_pass[position] not in BASE_CHARS
-               or generated_pass[position] in UNGOOD_CHARS):
+        while (generated_pass[position] not in available_chars):
             position += 1
         # When the next printable character is encountered, add it.
         printable_pass += generated_pass[position]
         position += 1
 
-    if copy_to_clipboard:
+    if options.copy:
         print "Password copied to X clipboard."
         save_to_clipboard(printable_pass)
     else:
         print printable_pass
 
-def store_key(identifier, prompt=True, save=False):
+def save_key(key, prompt=True, options=""):
     # Check to see that the config dir exists, creating it if needed
     if not os.path.isdir(CONFIG_DIR):
         os.mkdir(CONFIG_DIR)
@@ -99,17 +102,34 @@ def store_key(identifier, prompt=True, save=False):
     key_in_file = False
     with open(KEYS_FILE, "r") as keyfile:
         for line in keyfile:
-            if line.strip() == identifier:
+            if line.strip().split()[0] == key:
                 key_in_file = True
 
-    if not key_in_file:
-        if prompt and not save:
-            confirmation = raw_input("Store this key? [y/N] ")
-            if confirmation.lower() == "y":
-                save = True
-        if save:
+    if not key_in_file and prompt:
+        confirmation = raw_input("Store this key? [y/N] ")
+        if confirmation.lower() == "y":
             keyfile = open(KEYS_FILE, "a")
-            keyfile.write(identifier + "\n")
+            keyfile.write("%s %s\n" % (key, options))
+
+def print_keys():
+    with open(KEYS_FILE, "r") as keyfile:
+        for line in keyfile:
+           print line,
+
+def search(terms):
+    with open(KEYS_FILE, "r") as keyfile:
+        for line in keyfile:
+           for term in terms:
+               if term in line:
+                   print line,
+
+def get_options(options):
+    string = ""
+    if options.alpha:
+        string += "alpha "
+    if options.excluded_chars:
+        string += "exclude: [" + options.excluded_chars + "] "
+    return string
 
 def check_for_xsel():
     which_proc = subprocess.Popen(['which', 'xsel'], 
@@ -124,4 +144,3 @@ def save_to_clipboard(password):
 
 if __name__ == "__main__":
     main()
-

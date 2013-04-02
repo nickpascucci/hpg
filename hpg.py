@@ -45,6 +45,7 @@ options = parser.parse_args()
 def main():
     if not options.key and not options.print_keys and not options.search:
         parser.print_help()
+        exit(0)
 
     if options.print_keys:
         print_keys()
@@ -66,20 +67,20 @@ def main():
                "before passwords can be copied to the clipboard.")
         exit(1)
 
-    save_key(options.key, options.save, get_options(options))
+    save_key(options.key[0], options.save, get_options(options))
 
     # Get salt from user without echoing.
     password = getpass.getpass("Salt: ")
     pw_hash = hashlib.sha512(password).digest()
-    generated_pass = hashlib.sha512(pw_hash + options.key).digest()
+    generated_pass = hashlib.sha512(pw_hash + options.key[0]).digest()
 
     # Now, we need to extract a printable password from the hash.
     printable_pass = ""
     position = 0
-    while len(printable_pass) < NUM_CHARS:
-        # Skip non-printable characters.
+    while len(printable_pass) < options.length:
+        # Skip excluded characters. May cause the password to loop.
         while (generated_pass[position] not in available_chars):
-            position += 1
+            position = (position + 1) % len(generated_pass)
         # When the next printable character is encountered, add it.
         printable_pass += generated_pass[position]
         position += 1
@@ -124,12 +125,12 @@ def search(terms):
                    print line,
 
 def get_options(options):
-    string = ""
+    string = "["
     if options.alpha:
         string += "alpha "
     if options.excluded_chars:
         string += "exclude: [" + options.excluded_chars + "] "
-    return string
+    return string + "]"
 
 def check_for_xsel():
     which_proc = subprocess.Popen(['which', 'xsel'], 

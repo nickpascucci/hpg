@@ -118,9 +118,8 @@ def print_keys():
 def search(terms):
     with open(KEYS_FILE, "r") as keyfile:
         for line in keyfile:
-           for term in terms:
-               if term in line:
-                   print line,
+          if all(map(lambda t: t in line, terms)):
+            print line,
 
 def get_options(options):
     string = "["

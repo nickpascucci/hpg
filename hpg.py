@@ -18,8 +18,6 @@ import subprocess
 
 __author__ = "Nick Pascucci (npascut1@gmail.com)"
 
-HELP_TEXT = ("Usage: hpg [-l<password length>] [-e<excluded chars>] " 
-             "[-a] [-c] [-n] <identifier>")
 CONFIG_DIR = os.path.expanduser("~/.hpg")
 KEYS_FILE = CONFIG_DIR + "/keys"
 

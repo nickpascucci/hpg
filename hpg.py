@@ -1,23 +1,41 @@
 #! /usr/bin/env python2.7
 # -*- mode: python; fill-column: 80; -*-
 
+# hpg - The Hash Password Generator.
+# Copyright (C) 2014  Nick Pascucci
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see [http://www.gnu.org/licenses/].
+
 """A simple password generator.
 
 Uses a seed password and an identifier to generate a password. This allows it to
-generate unique passwords and recover them easily.
-"""
+generate unique passwords and recover them easily."""
 
 import argparse
 import getpass
 import hashlib
 import os
 import os.path
+import platform
 import string
 import sys
 import subprocess
 
 __author__ = "Nick Pascucci (npascut1@gmail.com)"
 
+HELP_TEXT = ("Usage: hpg [-l<password length>] [-e<excluded chars>] "
+             "[-a] [-c] [-n] <identifier>")
 CONFIG_DIR = os.path.expanduser("~/.hpg")
 KEYS_FILE = CONFIG_DIR + "/keys"
 
@@ -28,7 +46,7 @@ parser.add_argument("-e", "--excluded-chars", help="exclude characters",
                     default="", dest="excluded_chars")
 parser.add_argument("-a", "--alphanumeric", help="use only [a-zA-Z0-9]",
                     action="store_true", default=False, dest="alpha")
-parser.add_argument("-c", "--copy", help="copy to X clipboard",
+parser.add_argument("-c", "--copy", help="copy to clipboard",
                     action="store_true", default=False, dest="copy")
 parser.add_argument("-n", "--no-save", help="don't save key",
                     action="store_false", default=True, dest="save")
@@ -84,7 +102,7 @@ def main():
         position += 1
 
     if options.copy:
-        print "Password copied to X clipboard."
+        print "Password copied to clipboard."
         save_to_clipboard(printable_pass)
     else:
         print printable_pass
@@ -118,8 +136,9 @@ def print_keys():
 def search(terms):
     with open(KEYS_FILE, "r") as keyfile:
         for line in keyfile:
-          if all(map(lambda t: t in line, terms)):
-            print line,
+           for term in terms:
+               if term in line:
+                   print line,
 
 def get_options(options):
     string = "["
@@ -130,15 +149,23 @@ def get_options(options):
     return string + "]"
 
 def check_for_xsel():
-    which_proc = subprocess.Popen(['which', 'xsel'], 
-                                  stdout=subprocess.PIPE,
-                                  stderr=subprocess.PIPE)
-    which_proc.wait()
-    return (which_proc.returncode == 0)
+    if platform.system() == "Linux":
+        which_proc = subprocess.Popen(['which', 'xsel'],
+                                      stdout=subprocess.PIPE,
+                                      stderr=subprocess.PIPE)
+        which_proc.wait()
+        return (which_proc.returncode == 0)
+    return True
 
 def save_to_clipboard(password):
-    xsel_proc = subprocess.Popen(['xsel', '-pi'], stdin=subprocess.PIPE)
-    xsel_proc.communicate(password)
+    if platform.system() == "Linux":
+        xsel_proc = subprocess.Popen(['xsel', '-pi'], stdin=subprocess.PIPE)
+        xsel_proc.communicate(password)
+    elif platform.system() == "Darwin":
+        pbcopy_proc = subprocess.Popen(['pbcopy'], stdin=subprocess.PIPE)
+        pbcopy_proc.communicate(password)
+    else:
+        print "Copy to clipboard is not supported on this platform."
 
 if __name__ == "__main__":
     main()

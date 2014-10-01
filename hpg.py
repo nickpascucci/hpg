@@ -34,14 +34,12 @@ import subprocess
 
 __author__ = "Nick Pascucci (npascut1@gmail.com)"
 
-HELP_TEXT = ("Usage: hpg [-l<password length>] [-e<excluded chars>] "
-             "[-a] [-c] [-n] <identifier>")
 CONFIG_DIR = os.path.expanduser("~/.hpg")
 KEYS_FILE = CONFIG_DIR + "/keys"
 
 parser = argparse.ArgumentParser(description="A simple password generator.")
 parser.add_argument("-l", "--length", help="password length",
-                    default=12, dest="length")
+                    default=12, dest="length", type=int)
 parser.add_argument("-e", "--excluded-chars", help="exclude characters",
                     default="", dest="excluded_chars")
 parser.add_argument("-a", "--alphanumeric", help="use only [a-zA-Z0-9]",
@@ -94,12 +92,10 @@ def main():
     printable_pass = ""
     position = 0
     while len(printable_pass) < options.length:
-        # Skip excluded characters. May cause the password to loop.
-        while (generated_pass[position] not in available_chars):
-            position = (position + 1) % len(generated_pass)
-        # When the next printable character is encountered, add it.
+      position = (position + 1) % len(generated_pass)
+      # Skip excluded characters. May cause the password to repeat.
+      if generated_pass[position] in available_chars:
         printable_pass += generated_pass[position]
-        position += 1
 
     if options.copy:
         print "Password copied to clipboard."

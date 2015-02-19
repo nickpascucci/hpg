@@ -94,11 +94,12 @@ def main():
 
   printable_pass = ""
   if use_saved_config:
+    print "Saved settings:", saved_config
     printable_pass = generate_password(saved_config.get("name").encode("ascii"),
                                        saved_config.get("alphanumeric", False),
                                        saved_config.get("length", DEFAULT_LENGTH),
-                                       saved_config.get("included_chars", ""),
-                                       saved_config.get("excluded_chars", ""))
+                                       saved_config.get("include", ""),
+                                       saved_config.get("exclude", ""))
   else:
     printable_pass = generate_password(options.key,
                                        options.alpha,

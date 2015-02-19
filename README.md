@@ -28,9 +28,9 @@ nick@newawesome.com as my identifier, and create a new hashed password
 using ```hpg```:
 
     [nick@mymachine ~/]: hpg nick@newawesome.com
-    Store this key? [y/N] y
     Salt: 
     'P'@Lrnz0?5_
+    Store this key? [y/N] y
 
 And now I have a new password which I can recover easily. If I want to
 just use it immediately, I can add the -c option to hpg and it will
@@ -49,14 +49,21 @@ fancy you can rename it to just ```hpg```.
 
   Nope. Passwords are generated deterministically by the hashing
   algorithm, so there's no need to store them as long as you remember
-  the identifier and salt used to generate them.
+  the identifier and salt used to generate them. If you choose, you
+  may let hpg save the keys used to generate your passwords along with
+  any options specified on the command line in a JSON file. This file
+  is stored at ```~/.hpg/keys.json```. The save prompt can be disabled
+  entirely with the ```-n```/```--no-save``` option.
 
 * What hashing algorithm does it use?
 
   SHA512. Since not all of the bytes in a SHA512 hash are printable
-  hpg strips the hash of some blacklisted characters and uses the rest
-  to generate the passwords. You can control the blacklist by setting
-  the ```--excluded-chars``` option to your liking.
+  hpg strips some blacklisted characters out of the hash and uses the
+  rest to generate the passwords. You can control the blacklist by
+  setting the ```--exclude-chars``` option to your liking. Please note
+  that this isn't a cryptographic tool and makes no claims to be;
+  we're just trying to generate reasonably strong passwords in a
+  deterministic fashion.
 
 * What platforms does it work on?
 
@@ -66,3 +73,23 @@ fancy you can rename it to just ```hpg```.
 * What's the license?
 
   hpg is licensed under the GPLv3.
+
+## Options
+These are the options currently supported by ```hpg```:
+
+| Short | Long             | Description                              |
+|-------|------------------|------------------------------------------|
+|  -l   | --length         | password length                          |
+|  -e   | --exclude-chars  | characters to exclude                    |
+|  -i   | --include-chars  | characters to include                    |
+|  -a   | --alphanumeric   | use only [a-zA-Z0-9] *default=False*     |
+|  -c   | --copy           | copy to clipboard *default=False*        |
+|  -n   | --no-save        | don't save key *default=False*           |
+|  -p   | --print-keys     | show saved keys *default=False*          |
+|  -s   | --search         | search stored keys                       |
+
+* If both --include-chars and --exclude-chars are specified,
+  --exclude-chars takes precedence for any common characters.
+
+* If both --alphanumeric and --include-chars are specified,
+  --include-chars adds the specified chars to the [a-zA-Z0-9] set.

@@ -58,7 +58,7 @@ parser.add_argument("-n", "--no-save", help="don't save key",
 parser.add_argument("-p", "--print-keys", help="show saved keys",
                     action="store_true", default=False, dest="print_keys")
 parser.add_argument("-s", "--search", help="search stored keys",
-                    dest="search", nargs="+")
+                    default=False, action="store_true", dest="search")
 
 parser.add_argument("key", help="key to use as password base")
 
@@ -77,7 +77,7 @@ def main():
       exit(0)
 
   if options.search:
-      search(options.search, keys)
+      search(options.key, keys)
       exit(0)
 
   # Check arguments.
@@ -148,11 +148,10 @@ def print_keys(keys):
   for key in keys:
     print key["name"],
 
-def search(terms, keys):
+def search(term, keys):
   for key in keys:
-    for term in terms:
-      if term in key["name"]:
-        print key["name"],
+    if term in key["name"]:
+      print key["name"],
 
 def ensure_config():
   # Check to see that the config dir exists, creating it if needed

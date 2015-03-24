@@ -1,0 +1,29 @@
+<html>
+  <head>
+    <title>HPG - The Hash Password Generator</title>
+    <script src="cryptojs/rollups/sha512.js"></script>
+    <script src="cryptojs/components/enc-base64-min.js"></script>
+    <script src="hpg.js"></script>
+  </head>
+  <body>
+    <h1>HPG</h1>
+    <table>
+      <tr>
+        <td> Identifier:</td><td><input name="identifier" id="identifier-input" type="text" value="" placeholder="Identifier"/></td>
+      </tr>
+      <tr>
+        <td>Salt:</td><td><input name="salt" id="salt-input" type="password" value="" placeholder="Salt"/></td>
+      </tr>
+      <tr>
+        <td>Length:</td><td><input name="length" id="length-input" type="number" value="12"/></td>
+      </tr>
+      <tr>
+        <td>Use symbols:</td><td><input name="symbol" id="symbol-input" type="checkbox" checked/></td>
+      </tr>
+      <tr>
+        <td>Generated Pass:</td><td><input name="generated" id="generated-input" type="text" readonly/></td>
+      </tr>
+    </table>
+    <button id="generate-button">Generate</button>
+  </body>
+</html>

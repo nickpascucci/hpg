@@ -37,7 +37,13 @@ __author__ = "Nick Pascucci (npascut1@gmail.com)"
 
 CONFIG_DIR = os.path.expanduser("~/.hpg")
 KEYS_FILE = CONFIG_DIR + "/keys.json"
-DEFAULT_LENGTH = 12
+DEFAULT_LENGTH = 14
+
+# The number of times a weak hash can be attempted per second for brute force
+# attacks, as a rough estimate. This is intended to model what can happen if the
+# hashed version of your hpg-generated password is compromised via a security
+# leak, and _not_ how difficult it is to compromise your salt password.
+ATTACKER_HASH_RATE = 10**14 # 100 trillion guesses per second
 
 parser = argparse.ArgumentParser(description="A simple password generator.")
 # Generator options
@@ -106,6 +112,9 @@ def main():
                                        options.length,
                                        options.included_chars,
                                        options.excluded_chars)
+
+  print ("The generated password will take an estimated %s to crack."
+         % get_time_estimate(printable_pass))
 
   if options.copy:
       print "Password copied to clipboard."
@@ -215,6 +224,37 @@ def save_to_clipboard(password):
         pbcopy_proc.communicate(password)
     else:
         print "Copy to clipboard is not supported on this platform."
+
+def estimate_seconds_to_crack(password):
+  charset = set(string.ascii_letters)
+  for c in password:
+    if c in string.digits:
+      charset |= set(string.digits)
+    elif c in string.printable and not c in string.ascii_letters:
+      charset |= set(string.printable)
+  charset -= set(string.whitespace)
+  print "Character set contains %d characters" % len(charset)
+  print "Password is %d characters long" % len(password)
+  solution_space_size = len(charset) ** len(password)
+  print "Solution space size:", solution_space_size
+  return solution_space_size / ATTACKER_HASH_RATE
+
+def get_time_estimate(password):
+    time = estimate_seconds_to_crack(password)
+    m, s = divmod(time, 60)
+    h, m = divmod(m, 60)
+    d, h = divmod(h, 24)
+    y, d = divmod(d, 365)
+    if y > 0:
+      return ("%d year(s)" % y)
+    elif d > 0:
+      return ("%d day(s)" % d)
+    elif h > 0:
+      return ("%d hour(s)" % h)
+    elif m > 0:
+      return ("%d minute(s)" % m)
+    else:
+      return ("%d second(s)" % s)
 
 def prompt(text, default=False):
   if default:

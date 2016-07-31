@@ -1,0 +1,17 @@
+<div id="hpg"></div>
+<script src="cryptojs/rollups/sha512.js"></script>
+<script src="hpg.js"></script>
+<script src="hpg-elm.js"></script>
+<script>
+    var node = document.getElementById('hpg');
+    var app = Elm.Hpg.embed(node);
+    app.ports.generatePassword.subscribe(function (options) {
+      console.log("Generating new password from options", options);
+      app.ports.passwordGenerated.send(
+        generatePassword(
+          options["identifier"],
+          options["salt"],
+          options["charset"],
+          options["length"]));
+      });
+</script>

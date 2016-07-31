@@ -2,7 +2,7 @@ port module Hpg exposing (..)
 
 import Html exposing (..)
 import Html.App as Html
-import Html.Attributes exposing (..)
+import Html.Attributes as Att exposing (..)
 import Html.Events exposing (onClick, onInput, onCheck)
 import String
 
@@ -31,6 +31,14 @@ generate salt identifier charset length =
 filterToCharset : Charset -> String -> String
 filterToCharset charset str =
   String.filter (\c -> String.contains (String.fromChar c) charset) str
+
+
+pickCharset : Bool -> Charset
+pickCharset useSymbols =
+  case useSymbols of
+    True -> allPrintableChars
+    False -> alphaChars
+
 
 {--
   UI Functions
@@ -70,6 +78,7 @@ type Msg =
    Identifier String
   | Salt String
   | UseSymbols Bool
+  | Length String
   | PasswordGenerated String
 
 
@@ -92,9 +101,16 @@ update msg model =
         let newModel = {model |
           useSymbols = useSymbols,
           options = { currentOptions |
-            charset = if useSymbols then allPrintableChars else alphaChars}}
+            charset = pickCharset useSymbols}}
         in
          (newModel, generatePassword newModel.options)
+      Length len ->
+        case String.toInt len of
+          Err msg -> (model, Cmd.none)
+          Ok newLength ->
+            let newModel = {model | options =
+              { currentOptions | length = newLength}} in
+                (newModel, generatePassword newModel.options)
       PasswordGenerated password ->
          ({model | password = password}, Cmd.none)
 
@@ -102,12 +118,6 @@ update msg model =
 subscriptions : Model -> Sub Msg
 subscriptions model =
   passwordGenerated PasswordGenerated
-
-charset : Bool -> Charset
-charset useSymbols =
-  case useSymbols of
-    True -> allPrintableChars
-    False -> alphaChars
 
 
 css : String -> Html Msg
@@ -120,27 +130,40 @@ view model =
   div [ id "main" ]
    [ css "hpg.css"
    , label []
-      [ input
-        [type' "text"
-        , placeholder "Identifier"
+      [ text "Identifier"
+      , input
+        [ type' "text"
+        , placeholder "foo@foo.com"
         , value model.options.identifier
         , onInput Identifier] []
-      , text "Identifier"
       ]
+   , br [] []
    , label []
-      [ input
-        [type' "password"
-        , placeholder "Salt"
+      [ text "Master Password"
+      , input
+        [ type' "password"
+        , placeholder "my-secret-password"
         , value model.options.salt
         , onInput Salt] []
-      , text "Salt"
       ]
+   , br [] []
    , label []
-      [ input
-        [type' "checkbox"
+      [ text "Length"
+      , input
+        [ type' "number"
+        , Att.min "1"
+        , step "1"
+        , value (toString model.options.length)
+        , onInput Length
+        ] []
+      ]
+   , br [] []
+   , label []
+      [ text "Use Symbols"
+      , input
+        [ type' "checkbox"
         , checked model.useSymbols
         , onCheck UseSymbols] []
-      , text "Use Symbols"
       ]
    , div []
       [ text model.password ]

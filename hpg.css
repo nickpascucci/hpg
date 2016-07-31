@@ -12,4 +12,5 @@ input {
     border: 3px black;
     font-size: 0.75em;
     width: 50%;
+    padding: 10px;
 }

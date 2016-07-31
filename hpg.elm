@@ -40,6 +40,10 @@ pickCharset useSymbols =
     False -> alphaChars
 
 
+port generatePassword : PWOptions -> Cmd msg
+port passwordGenerated : (String -> msg) -> Sub msg
+
+
 {--
   UI Functions
 --}
@@ -47,7 +51,7 @@ pickCharset useSymbols =
 main : Program Never
 main =
   Html.program
-   { init = defaultModel
+   { init = init
    , view = view
    , update = update
    , subscriptions = subscriptions}
@@ -68,10 +72,10 @@ type alias Model =
   }
 
 
-defaultModel : (Model, Cmd Msg)
-defaultModel =
-   (Model (PWOptions "" "" allPrintableChars 14) "" True,
-    Cmd.none)
+init : (Model, Cmd Msg)
+init =
+  let defaultOptions = (PWOptions "" "" allPrintableChars 14) in
+   ( Model defaultOptions "" True, generatePassword defaultOptions )
 
 
 type Msg =
@@ -80,10 +84,6 @@ type Msg =
   | UseSymbols Bool
   | Length String
   | PasswordGenerated String
-
-
-port generatePassword : PWOptions -> Cmd msg
-port passwordGenerated : (String -> msg) -> Sub msg
 
 
 update : Msg -> Model -> (Model, Cmd Msg)
@@ -120,51 +120,55 @@ subscriptions model =
   passwordGenerated PasswordGenerated
 
 
-css : String -> Html Msg
-css path =
-  node "link" [ rel "stylesheet", href path ] []
-
-
 view : Model -> Html Msg
 view model =
-  div [ id "main" ]
-   [ css "hpg.css"
-   , label []
-      [ text "Identifier"
+  div [ id "main", class "col-lg-6" ]
+    [ h2 [] [ text "Generate Password" ]
+    , Html.form [ class "form-horizontal well" ]
+      [ label [ for "inputIdentifier" ]
+        [ text "Identifier" ]
       , input
         [ type' "text"
+        , id "inputIdentifier"
+        , class "form-control"
         , placeholder "foo@foo.com"
         , value model.options.identifier
         , onInput Identifier] []
-      ]
-   , br [] []
-   , label []
-      [ text "Master Password"
+      , br [] []
+      , label [ for "inputPassword" ]
+        [ text "Master Password" ]
       , input
         [ type' "password"
+        , id "inputPassword"
+        , class "form-control"
         , placeholder "my-secret-password"
         , value model.options.salt
         , onInput Salt] []
-      ]
-   , br [] []
-   , label []
-      [ text "Length"
+      , br [] []
+      , label [ for "inputLength" ]
+        [ text "Length" ]
       , input
         [ type' "number"
+        , id "inputLength"
+        , class "form-control"
         , Att.min "1"
         , step "1"
         , value (toString model.options.length)
         , onInput Length
         ] []
+      , br [] []
+      , label []
+        [ input
+          [ type' "checkbox"
+          , checked model.useSymbols
+          , onCheck UseSymbols] []
+        , text " Use Symbols "
+        ]
       ]
-   , br [] []
-   , label []
-      [ text "Use Symbols"
-      , input
-        [ type' "checkbox"
-        , checked model.useSymbols
-        , onCheck UseSymbols] []
+    , div [ id "generatedPassword", class "well" ]
+      [ h3 []
+        [ text "Password: "
+        , text model.password
+        ]
       ]
-   , div []
-      [ text model.password ]
-   ]
+    ]

@@ -190,7 +190,7 @@ def update_keys(new_key, keys=[], options=""):
       keys.append(make_config_entry(new_key, options))
       with open(KEYS_FILE, "w") as keyfile:
         config = {"keys": keys}
-        json.dump(config, keyfile)
+        json.dump(config, keyfile, sort_keys=True, indent=2, separators=(",", ": "))
 
 def make_config_entry(key, options):
   entry = {"name": key, "length": options.length}

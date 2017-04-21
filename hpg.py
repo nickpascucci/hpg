@@ -204,7 +204,11 @@ def make_config_entry(key, options):
 
 def load_config(keyfile):
   with open(keyfile, "r") as f:
-    return json.load(f)
+    try:
+      return json.load(f)
+    except ValueError as e:
+      print ("Error loading config file (%s):" % keyfile), e
+      raise e
 
 def check_for_xsel():
     if platform.system() == "Linux":
@@ -267,5 +271,5 @@ def prompt(text, default=False):
 if __name__ == "__main__":
   try:
     main()
-  except:
+  except ValueError as e:
     pass

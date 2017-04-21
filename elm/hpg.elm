@@ -1,7 +1,6 @@
 port module Hpg exposing (..)
 
 import Html exposing (..)
-import Html.App as Html
 import Html.Attributes as Att exposing (..)
 import Html.Events exposing (onClick, onInput, onCheck)
 import String
@@ -48,9 +47,9 @@ port passwordGenerated : (String -> msg) -> Sub msg
   UI Functions
 --}
 
-main : Program Never
+main : Program Never Model Msg
 main =
-  Html.program
+  program
    { init = init
    , view = view
    , update = update
@@ -128,7 +127,7 @@ view model =
       [ label [ for "inputIdentifier" ]
         [ text "Identifier" ]
       , input
-        [ type' "text"
+        [ type_ "text"
         , id "inputIdentifier"
         , class "form-control"
         , placeholder "foo@foo.com"
@@ -138,7 +137,7 @@ view model =
       , label [ for "inputPassword" ]
         [ text "Master Password" ]
       , input
-        [ type' "password"
+        [ type_ "password"
         , id "inputPassword"
         , class "form-control"
         , placeholder "my-secret-password"
@@ -148,7 +147,7 @@ view model =
       , label [ for "inputLength" ]
         [ text "Length" ]
       , input
-        [ type' "number"
+        [ type_ "number"
         , id "inputLength"
         , class "form-control"
         , Att.min "1"
@@ -159,7 +158,7 @@ view model =
       , br [] []
       , label []
         [ input
-          [ type' "checkbox"
+          [ type_ "checkbox"
           , checked model.useSymbols
           , onCheck UseSymbols] []
         , text " Use Symbols "

@@ -147,10 +147,10 @@ def generate_password(key, restrict_to_alpha, length,
   printable_pass = ""
   position = 0
   while len(printable_pass) < length:
-    position = (position + 1) % len(generated_pass)
     # Skip excluded characters. May cause the password to repeat.
     if generated_pass[position] in available_chars:
       printable_pass += generated_pass[position]
+    position = (position + 1) % len(generated_pass)
   return printable_pass
 
 def print_keys(keys):

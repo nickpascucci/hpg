@@ -38,6 +38,8 @@ __author__ = "Nick Pascucci (npascut1@gmail.com)"
 CONFIG_DIR = os.path.expanduser("~/.hpg")
 KEYS_FILE = CONFIG_DIR + "/keys.json"
 DEFAULT_LENGTH = 14
+ALPHANUM = string.ascii_letters + string.digits
+SYMBOLS = "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~';"
 
 # The number of times a weak hash can be attempted per second for brute force
 # attacks, as a rough estimate. This is intended to model what can happen if the
@@ -51,6 +53,10 @@ parser.add_argument("-l", "--length", help="password length",
                     default=DEFAULT_LENGTH, dest="length", type=int)
 parser.add_argument("-e", "--exclude-chars", help="characters to exclude",
                     default="", dest="excluded_chars")
+parser.add_argument("-o", "--only-included-chars",
+                    help="use only the chars passed with --include-chars",
+                    action="store_true", default=False,
+                    dest="only_included_chars")
 parser.add_argument("-i", "--include-chars", help="characters to include",
                     default="", dest="included_chars")
 parser.add_argument("-a", "--alphanumeric", help="use only [a-zA-Z0-9]",
@@ -68,9 +74,8 @@ parser.add_argument("-s", "--search", help="search stored keys",
 
 parser.add_argument("key", help="key to use as password base")
 
-def main():
-  options = parser.parse_args()
-  if not options.key and not options.print_keys and not options.search:
+def main(options):
+  if not options["key"] and not options["print_keys"] and not options["search"]:
         parser.print_help()
         exit(0)
 
@@ -78,77 +83,82 @@ def main():
   config = load_config(KEYS_FILE)
   keys = config["keys"]
 
-  if options.print_keys:
+  if options["print_keys"]:
       print_keys(keys)
       exit(0)
 
-  if options.search:
-      search(options.key, keys)
+  if options["search"]:
+      search(options["key"], keys)
       exit(0)
 
   # Check arguments.
-  if options.copy and not check_for_xsel():
+  if options["copy"] and not check_for_xsel():
       print ("xsel is not in your PATH. You must install it "
              "before passwords can be copied to the clipboard.")
       exit(1)
 
-  saved_config = find_config(options.key, keys)
+  saved_config = find_config(options["key"], keys)
   use_saved_config = False
   if saved_config:
     use_saved_config = prompt("Use saved settings for this key?",
                               default=True)
 
   printable_pass = ""
+  key = options["key"]
+  only_alpha = options["alpha"]
+  length = options["length"]
+  included_chars = options["included_chars"]
+  excluded_chars = options["excluded_chars"]
+
   if use_saved_config:
     print "Saved settings:", saved_config
-    printable_pass = generate_password(saved_config.get("name").encode("ascii"),
-                                       saved_config.get("alphanumeric", False),
-                                       saved_config.get("length", DEFAULT_LENGTH),
-                                       saved_config.get("include", ""),
-                                       saved_config.get("exclude", ""))
-  else:
-    printable_pass = generate_password(options.key,
-                                       options.alpha,
-                                       options.length,
-                                       options.included_chars,
-                                       options.excluded_chars)
+    key = saved_config.get("name").encode("ascii")
+    only_alpha = saved_config.get("alphanumeric", False)
+    length = saved_config.get("length", DEFAULT_LENGTH)
+    included_chars = saved_config.get("include", "")
+    excluded_chars = saved_config.get("exclude", "")
 
-  print ("The generated password will take an estimated %s to crack."
-         % get_time_estimate(printable_pass))
-
-  if options.copy:
-      print "Password copied to clipboard."
-      save_to_clipboard(printable_pass)
-  else:
-      print printable_pass
-  if not options.skip_save and not use_saved_config:
-    update_keys(options.key, keys, options)
-
-def generate_password(key, restrict_to_alpha, length,
-                      included_chars="", excluded_chars=""):
   # Basic character sets
-  if restrict_to_alpha:
-    available_chars = set(string.ascii_letters + string.digits)
+  if not options["only_included_chars"]:
+    if only_alpha:
+      available_chars = set(ALPHANUM)
+    else:
+      available_chars = set(ALPHANUM + SYMBOLS)
   else:
-    available_chars = set(string.printable)
+    available_chars = set()
 
   # Add in user-specified characters
   available_chars |= set(included_chars)
 
-  # Remove non-printables and user-specified exclusions
+  # Remove invisible characters and user-specified exclusions
   available_chars -= set(string.whitespace + excluded_chars)
 
   # Get salt from user without echoing.
-  password = getpass.getpass("Salt: ")
-  pw_hash = hashlib.sha512(password).digest()
-  generated_pass = hashlib.sha512(pw_hash + key).digest()
+  salt = getpass.getpass("Salt: ")
+  printable_pass = generate_password(key, salt, length, available_chars)
+
+  print ("The generated password will take an estimated %s to crack."
+         % get_time_estimate(printable_pass))
+
+  if options["copy"]:
+      print "Password copied to clipboard."
+      save_to_clipboard(printable_pass)
+  else:
+      print printable_pass
+  if not options["skip_save"] and not use_saved_config:
+    update_keys(options["key"], keys, options)
+  return printable_pass
+
+def generate_password(key, salt, length, included_chars):
+  salt_hash = hashlib.sha512(salt).digest()
+  generated_pass = hashlib.sha512(salt_hash + key).digest()
 
   # Now, we need to extract a printable password from the hash.
   printable_pass = ""
   position = 0
   while len(printable_pass) < length:
     # Skip excluded characters. May cause the password to repeat.
-    if generated_pass[position] in available_chars:
+    if generated_pass[position] in included_chars:
       printable_pass += generated_pass[position]
     position = (position + 1) % len(generated_pass)
   return printable_pass
@@ -190,16 +200,17 @@ def update_keys(new_key, keys=[], options=""):
       keys.append(make_config_entry(new_key, options))
       with open(KEYS_FILE, "w") as keyfile:
         config = {"keys": keys}
-        json.dump(config, keyfile, sort_keys=True, indent=2, separators=(",", ": "))
+        json.dump(config, keyfile, sort_keys=True,
+                  indent=2, separators=(",", ": "))
 
 def make_config_entry(key, options):
-  entry = {"name": key, "length": options.length}
-  if options.alpha:
+  entry = {"name": key, "length": options["length"]}
+  if options["alpha"]:
     entry["alphanumeric"] = True
-  if options.included_chars:
-    entry["include"] = options.included_chars
-  if options.excluded_chars:
-    entry["exclude"] = options.excluded_chars
+  if options["included_chars"]:
+    entry["include"] = options["included_chars"]
+  if options["excluded_chars"]:
+    entry["exclude"] = options["excluded_chars"]
   return entry
 
 def load_config(keyfile):
@@ -270,6 +281,7 @@ def prompt(text, default=False):
 
 if __name__ == "__main__":
   try:
-    main()
+    options = parser.parse_args()
+    main(vars(options))
   except ValueError as e:
     pass

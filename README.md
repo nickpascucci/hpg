@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/nickpascucci/hpg.svg?branch=master)](https://travis-ci.org/nickpascucci/hpg)
+
 # hpg
 ## The Hash Password Generator
 

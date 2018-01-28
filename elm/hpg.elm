@@ -22,16 +22,6 @@ allPrintableChars : Charset
 allPrintableChars = alphaChars ++ symbolChars
 
 
-generate : Salt -> Identifier -> Charset -> Int -> String
-generate salt identifier charset length =
-   filterToCharset charset (identifier ++ salt)
-
-
-filterToCharset : Charset -> String -> String
-filterToCharset charset str =
-  String.filter (\c -> String.contains (String.fromChar c) charset) str
-
-
 pickCharset : Bool -> Charset
 pickCharset useSymbols =
   case useSymbols of
@@ -122,7 +112,7 @@ subscriptions model =
 view : Model -> Html Msg
 view model =
   div [ id "main", class "col-lg-6" ]
-    [ h2 [] [ text "Generate Password" ]
+    [ h2 [] [ text "HPG: Generate a password" ]
     , Html.form [ class "form-horizontal well" ]
       [ label [ for "inputIdentifier" ]
         [ text "Identifier" ]

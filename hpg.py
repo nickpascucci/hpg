@@ -283,5 +283,5 @@ if __name__ == "__main__":
   try:
     options = parser.parse_args()
     main(vars(options))
-  except ValueError as e:
+  except (ValueError, KeyboardInterrupt):
     pass
